@@ -1,0 +1,26 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "This Norman Hub is already configured",
+            "no_devices_found": "No devices found on the network",
+            "single_instance_allowed": "Already configured. Only a single configuration possible."
+        },
+        "error": {
+            "cannot_connect": "Failed to connect to the Norman Hub",
+            "invalid_response": "Invalid response received from API",
+            "unknown": "Unexpected error"
+        },
+        "step": {
+            "confirm": {
+                "description": "Do you want to start setup?"
+            },
+            "user": {
+                "data": {
+                    "host": "IP address or hostname"
+                },
+                "description": "Connect to your Norman Hub to control your devices.",
+                "title": "Connect to Norman Hub"
+            }
+        }
+    }
+}
