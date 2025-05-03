@@ -56,7 +56,6 @@ class NormanCoverBase(CoordinatorEntity[NormanCoordinator], CoverEntity):
         CoverEntityFeature.OPEN
         | CoverEntityFeature.CLOSE
         | CoverEntityFeature.SET_POSITION
-        | CoverEntityFeature.STOP
     )
 
     def __init__(
@@ -144,13 +143,6 @@ class NormanCoverBase(CoordinatorEntity[NormanCoordinator], CoverEntity):
             bottom=position, middle=None, action="set position", value=position
         )
 
-    async def async_stop_cover(self, **kwargs: Any) -> None:
-        """Stop the cover by maintaining its current position."""
-        current = self.current_cover_position
-        if current is None:
-            return
-        await self._async_set_position(bottom=current, middle=None, action="stop cover")
-
     async def _async_set_position(
         self,
         bottom: int | None,
@@ -197,7 +189,6 @@ class NormanBlind(NormanCoverBase):
         CoverEntityFeature.OPEN
         | CoverEntityFeature.CLOSE
         | CoverEntityFeature.SET_POSITION
-        | CoverEntityFeature.STOP
         | CoverEntityFeature.OPEN_TILT
         | CoverEntityFeature.CLOSE_TILT
         | CoverEntityFeature.SET_TILT_POSITION
