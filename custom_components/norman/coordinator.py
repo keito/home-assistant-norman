@@ -49,6 +49,12 @@ class NormanCoordinator(DataUpdateCoordinator[NormanDeviceData]):
             )
             try:
                 await asyncio.sleep(RECONNECT_INTERVAL)
+                # Refresh device states when reconnecting to ensure we have the latest state
+                # This handles cases where blind states changed while the hub was offline
+                _LOGGER.debug(
+                    "Refreshing device states after notification reconnection"
+                )
+                await self.async_refresh()
             except asyncio.CancelledError:
                 _LOGGER.debug("Notification listener sleep cancelled")
                 return
