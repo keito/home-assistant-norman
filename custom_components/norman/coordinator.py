@@ -9,7 +9,12 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import NormanApiClient, NormanApiError, NormanConnectionError
+from .api import (
+    NormanApiClient,
+    NormanApiError,
+    NormanConnectionError,
+    NormanPeriodicReconnectError,
+)
 from .const import COVER_TYPE_SMARTDRAPE, DOMAIN, RECONNECT_INTERVAL
 from .models import NormanDeviceData, NormanPeripheralData
 
@@ -42,6 +47,9 @@ class NormanCoordinator(DataUpdateCoordinator[NormanDeviceData]):
                 return
             except NormanConnectionError as err:
                 _LOGGER.error("Notification listener disconnected: %s", err)
+            except NormanPeriodicReconnectError:
+                _LOGGER.debug("Periodic reconnection time arrived")
+                continue
 
             _LOGGER.info(
                 "Reconnecting notification listener in %s seconds",

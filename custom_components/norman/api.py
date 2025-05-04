@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
+import contextlib
 import json
 import logging
 import time
@@ -13,6 +15,8 @@ from aiohttp import ClientResponse, ClientTimeout
 from aiohttp.client_exceptions import ClientError
 
 from homeassistant.exceptions import HomeAssistantError
+
+from .const import NOTIF_MAX_DURATION, READ_CHUNK_SIZE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,6 +33,10 @@ class NormanApiError(HomeAssistantError):
 
 class NormanConnectionError(HomeAssistantError):
     """Exception to indicate a connection error occurred."""
+
+
+class NormanPeriodicReconnectError(HomeAssistantError):
+    """Exception to indicate a period reconnection (not really an error)."""
 
 
 class NormanApiClient:
@@ -240,19 +248,49 @@ class NormanApiClient:
     async def async_listen_notifications(self) -> AsyncIterator[dict[str, Any]]:
         """Listen for peripheral state change notifications via long-poll."""
         url = f"{self.base_url}/NM/v1/notification"
-        # Disable timeouts for long-poll
         timeout = ClientTimeout(total=None)
+        reconnect_task: asyncio.Task[None] | None = None
+        read_task: asyncio.Task[bytes] | None = None
+
         try:
             async with self._session.post(url, timeout=timeout) as response:
                 response.raise_for_status()
                 self._notif_response = response
                 buffer: str = ""
                 depth = 0
+
+                # Create a task to force reconnection after max duration
+                reconnect_task = asyncio.create_task(asyncio.sleep(NOTIF_MAX_DURATION))
+
                 while True:
-                    chunk = await response.content.read(1024)
+                    # Handle both reading data and periodic reconnection
+                    read_task = asyncio.create_task(
+                        response.content.read(READ_CHUNK_SIZE)
+                    )
+
+                    # Wait for either data to be read or the max duration to be reached
+                    done, pending = await asyncio.wait(
+                        [read_task, reconnect_task], return_when=asyncio.FIRST_COMPLETED
+                    )
+
+                    # If reconnect_task completed, force a reconnection
+                    if reconnect_task in done:
+                        _LOGGER.debug(
+                            "Max notification connection time reached (%s seconds)",
+                            NOTIF_MAX_DURATION,
+                        )
+                        for task in pending:
+                            task.cancel()
+                        # Trigger reconnect
+                        raise NormanPeriodicReconnectError
+
+                    # Get the read result
+                    chunk = await read_task
+
                     if not chunk:
                         # No more data, stream closed
                         break
+
                     text = chunk.decode(errors="ignore")
                     for char in text:
                         if char == "{":
@@ -275,9 +313,30 @@ class NormanApiClient:
                                 buffer = ""
                         elif depth > 0:
                             buffer += char
+
         except ClientError as err:
             raise NormanConnectionError(
                 f"Notification listener connection error: {err}"
             ) from err
+        except asyncio.CancelledError:
+            _LOGGER.debug("Notification listener task was cancelled")
+            raise
         finally:
-            self._notif_response = None
+            # Clean up the response if it exists
+            if self._notif_response:
+                self._notif_response.close()
+                self._notif_response = None
+
+            # Cancel helper tasks we created
+            if reconnect_task and not reconnect_task.done():
+                reconnect_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await reconnect_task
+
+            if read_task:
+                if not read_task.done():
+                    read_task.cancel()
+                # Always await the read_task in case a ClientConnectionError is raised
+                # Otherwise, we get a "Task exception was never retrieved"
+                with contextlib.suppress(asyncio.CancelledError, ClientError):
+                    await read_task

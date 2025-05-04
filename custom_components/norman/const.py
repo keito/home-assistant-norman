@@ -10,8 +10,10 @@ PLATFORMS = [Platform.COVER]
 # Config entry keys
 CONF_HOST = "host"
 
-# Default values
-RECONNECT_INTERVAL = 15  # seconds
+RECONNECT_INTERVAL = 15  # seconds to wait after disconnect before reconnecting
+NOTIF_MAX_DURATION = 300  # seconds, max time before forcing a reconnect
+
+READ_CHUNK_SIZE = 1024
 
 # Cover types
 COVER_TYPE_SMARTDRAPE = "smartdrape"  # Has position and tilt capabilities
