@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+import voluptuous as vol
+
 from homeassistant.components.cover import (
     ATTR_POSITION,
     ATTR_TILT_POSITION,
@@ -16,11 +18,20 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity import DeviceInfo, cached_property
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.entity_platform import (
+    AddConfigEntryEntitiesCallback,
+    async_get_current_platform,
+)
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .api import NormanApiError, NormanConnectionError
-from .const import COVER_TYPE_SMARTDRAPE, DOMAIN
+from .const import (
+    ATTR_TARGET_POSITION,
+    ATTR_TARGET_TILT,
+    COVER_TYPE_SMARTDRAPE,
+    DOMAIN,
+    SERVICE_NUDGE_POSITION,
+)
 from .coordinator import NormanCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -45,6 +56,14 @@ async def async_setup_entry(
             raise HomeAssistantError(
                 f"Unsupported cover type {cover_type} for device {device_id}"
             )
+
+    # Register a service to nudge the position of the blinds
+    platform = async_get_current_platform()
+    platform.async_register_entity_service(
+        SERVICE_NUDGE_POSITION,
+        {vol.Required("step"): vol.All(vol.Coerce(int), vol.Range(min=-100, max=100))},
+        "async_nudge_position",
+    )
 
     async_add_entities(entities)
 
@@ -82,6 +101,8 @@ class NormanCoverBase(CoordinatorEntity[NormanCoordinator], CoverEntity):
             suggested_area=device_data.room_name,
             sw_version=device_data.firmware_version,
         )
+
+        self._attr_extra_state_attributes = {}
 
     @cached_property
     def device_class(self) -> CoverDeviceClass | None:
@@ -151,25 +172,22 @@ class NormanCoverBase(CoordinatorEntity[NormanCoordinator], CoverEntity):
         value: int | None = None,
     ) -> None:
         """Set bottom and middle rail positions, preserving the other if None, with error handling."""
-        # Fetch current data for defaults
-        data = self.coordinator.data.get(self._device_id)
+
         # Determine bottom rail position
         if bottom is None:
-            if data and data.bottom_rail_position is not None:
-                bottom_val = data.bottom_rail_position
-            else:
-                bottom_val = 100
+            bottom_val = self._attr_extra_state_attributes.get(
+                ATTR_TARGET_POSITION, 100
+            )
         else:
             bottom_val = bottom
+            self._attr_extra_state_attributes[ATTR_TARGET_POSITION] = bottom
 
         # Determine middle rail position
         if middle is None:
-            if data and data.middle_rail_position is not None:
-                middle_val = data.middle_rail_position
-            else:
-                middle_val = 100
+            middle_val = self._attr_extra_state_attributes.get(ATTR_TARGET_TILT, 100)
         else:
             middle_val = middle
+            self._attr_extra_state_attributes[ATTR_TARGET_TILT] = middle
 
         try:
             await self.coordinator.api.async_set_position(
@@ -180,6 +198,27 @@ class NormanCoverBase(CoordinatorEntity[NormanCoordinator], CoverEntity):
             raise HomeAssistantError(
                 f"Failed to {action} (value: {value}) for {self._attr_name}: {err}"
             ) from err
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:  # type: ignore[override]
+        """Return extra state attributes."""
+        data = self.coordinator.data.get(self._device_id)
+        self._attr_extra_state_attributes[ATTR_TARGET_POSITION] = getattr(
+            data, "target_bottom_rail_position", None
+        )
+        return self._attr_extra_state_attributes
+
+    async def async_nudge_position(self, step: int) -> None:
+        """Nudge the cover position by a specified step."""
+        # Positive step = more open, negative = more closed
+        new_pos = max(
+            0,
+            min(
+                100,
+                (self._attr_extra_state_attributes[ATTR_TARGET_POSITION] or 0) + step,
+            ),
+        )
+        await self.async_set_cover_position(position=new_pos)
 
 
 class NormanBlind(NormanCoverBase):
@@ -224,3 +263,13 @@ class NormanBlind(NormanCoverBase):
             action="set tilt position",
             value=tilt_position,
         )
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:  # type: ignore[override]
+        """Return extra state attributes."""
+        _ = super().extra_state_attributes
+        data = self.coordinator.data.get(self._device_id)
+        self._attr_extra_state_attributes[ATTR_TARGET_TILT] = getattr(
+            data, "target_middle_rail_position", None
+        )
+        return self._attr_extra_state_attributes

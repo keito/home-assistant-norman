@@ -17,3 +17,8 @@ READ_CHUNK_SIZE = 1024
 
 # Cover types
 COVER_TYPE_SMARTDRAPE = "smartdrape"  # Has position and tilt capabilities
+
+ATTR_TARGET_POSITION = "target_position"
+ATTR_TARGET_TILT = "target_tilt"
+
+SERVICE_NUDGE_POSITION = "nudge_position"

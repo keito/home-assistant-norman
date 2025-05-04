@@ -1,0 +1,13 @@
+nudge_position:
+  target:
+    entity:
+      integration: norman
+      domain: cover
+  fields:
+    step:
+      description: The step (negative or positive) to nudge the cover position by.
+      example: 50
+      required: true
+      type: integer
+      min: -100
+      max: 100
