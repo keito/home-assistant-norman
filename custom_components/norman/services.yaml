@@ -11,3 +11,16 @@ nudge_position:
       type: integer
       min: -100
       max: 100
+nudge_tilt:
+  target:
+    entity:
+      integration: norman
+      domain: cover
+  fields:
+    step:
+      description: The step (negative or positive) to nudge the cover tilt by.
+      example: 50
+      required: true
+      type: integer
+      min: -100
+      max: 100

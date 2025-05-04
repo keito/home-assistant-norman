@@ -22,3 +22,4 @@ ATTR_TARGET_POSITION = "target_position"
 ATTR_TARGET_TILT = "target_tilt"
 
 SERVICE_NUDGE_POSITION = "nudge_position"
+SERVICE_NUDGE_TILT = "nudge_tilt"

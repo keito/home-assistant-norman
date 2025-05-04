@@ -31,6 +31,7 @@ from .const import (
     COVER_TYPE_SMARTDRAPE,
     DOMAIN,
     SERVICE_NUDGE_POSITION,
+    SERVICE_NUDGE_TILT,
 )
 from .coordinator import NormanCoordinator
 
@@ -63,6 +64,11 @@ async def async_setup_entry(
         SERVICE_NUDGE_POSITION,
         {vol.Required("step"): vol.All(vol.Coerce(int), vol.Range(min=-100, max=100))},
         "async_nudge_position",
+    )
+    platform.async_register_entity_service(
+        SERVICE_NUDGE_TILT,
+        {vol.Required("step"): vol.All(vol.Coerce(int), vol.Range(min=-100, max=100))},
+        "async_nudge_tilt",
     )
 
     async_add_entities(entities)
@@ -273,3 +279,14 @@ class NormanBlind(NormanCoverBase):
             data, "target_middle_rail_position", None
         )
         return self._attr_extra_state_attributes
+
+    async def async_nudge_tilt(self, step: int) -> None:
+        """Nudge the cover tilt by a specified step."""
+        new_tilt = max(
+            0,
+            min(
+                100,
+                (self._attr_extra_state_attributes[ATTR_TARGET_TILT] or 0) + step,
+            ),
+        )
+        await self.async_set_cover_tilt_position(tilt_position=new_tilt)
