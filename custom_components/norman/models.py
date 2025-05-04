@@ -28,4 +28,4 @@ class NormanPeripheralData:
 
 
 # Represents all peripherals keyed by their ID
-NormanDeviceData = dict[int, NormanPeripheralData]
+NormanDevices = dict[int, NormanPeripheralData]

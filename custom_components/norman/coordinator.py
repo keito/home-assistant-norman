@@ -16,12 +16,12 @@ from .api import (
     NormanPeriodicReconnectError,
 )
 from .const import COVER_TYPE_SMARTDRAPE, DOMAIN, RECONNECT_INTERVAL
-from .models import NormanDeviceData, NormanPeripheralData
+from .models import NormanDevices, NormanPeripheralData
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class NormanCoordinator(DataUpdateCoordinator[NormanDeviceData]):
+class NormanCoordinator(DataUpdateCoordinator[NormanDevices]):
     """Norman data update coordinator."""
 
     def __init__(self, hass: HomeAssistant, api: NormanApiClient) -> None:
@@ -67,7 +67,7 @@ class NormanCoordinator(DataUpdateCoordinator[NormanDeviceData]):
                 _LOGGER.debug("Notification listener sleep cancelled")
                 return
 
-    async def _async_update_data(self) -> NormanDeviceData:
+    async def _async_update_data(self) -> NormanDevices:
         """Fetch data from API.
 
         Returns:
@@ -94,7 +94,7 @@ class NormanCoordinator(DataUpdateCoordinator[NormanDeviceData]):
 
     def _process_data(
         self, device_info: dict[str, Any], status_data: dict[str, Any]
-    ) -> NormanDeviceData:
+    ) -> NormanDevices:
         """Process and combine data from GetAllPeripheral and status endpoints.
 
         Args:
@@ -105,7 +105,7 @@ class NormanCoordinator(DataUpdateCoordinator[NormanDeviceData]):
             Combined data keyed by device ID
 
         """
-        devices: NormanDeviceData = {}
+        devices: NormanDevices = {}
 
         # Process device information (names, room, group)
         if "results" in device_info and "RoomList" in device_info["results"]:
