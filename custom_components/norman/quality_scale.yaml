@@ -4,7 +4,7 @@ rules:
   appropriate-polling: todo
   brands: todo
   common-modules: todo
-  config-flow-test-coverage: todo
+  config-flow-test-coverage: done
   config-flow: todo
   dependency-transparency: todo
   docs-actions: todo
