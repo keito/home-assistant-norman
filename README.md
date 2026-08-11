@@ -6,6 +6,25 @@ It's currently only tested with the SmartDrape, but it should work well with any
 
 As with other kinds of blinds in Home Assistant, all position/tilt values are positive integers from 0 to 100.
 
+## Installation
+
+Requires Home Assistant 2025.1.0 or newer.
+
+### HACS (recommended)
+
+1. In Home Assistant, open **HACS**.
+2. Click the three-dot menu in the top right and choose **Custom repositories**.
+3. Add `https://github.com/keito/home-assistant-norman` with type **Integration** and click **Add**.
+4. Search HACS for **Norman**, open it, and click **Download**.
+5. Restart Home Assistant.
+6. Go to **Settings → Devices & Services → Add Integration**, search for **Norman**, and enter the IP address or hostname of your Norman Hub.
+
+### Manual
+
+1. Copy `custom_components/norman` into your Home Assistant `config/custom_components/` directory.
+2. Restart Home Assistant.
+3. Go to **Settings → Devices & Services → Add Integration**, search for **Norman**, and enter the IP address or hostname of your Norman Hub.
+
 ## Actions
 In addition to the standard position/tilt features of [Cover](https://www.home-assistant.io/integrations/cover/) entities, this integration also supports the following actions, for use in automations when you want to nudge the position/tilt of the blinds relative to their current position.
 
